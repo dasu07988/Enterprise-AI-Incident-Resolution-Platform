@@ -1,0 +1,201 @@
+{
+  "name": "Agent 6 - Notification Generator - FINAL",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "incident_id"
+            },
+            {
+              "name": "title"
+            },
+            {
+              "name": "service"
+            },
+            {
+              "name": "severity"
+            },
+            {
+              "name": "priority"
+            },
+            {
+              "name": "business_impact"
+            },
+            {
+              "name": "affected_users"
+            },
+            {
+              "name": "sla_response"
+            },
+            {
+              "name": "primary_root_cause"
+            },
+            {
+              "name": "affected_component"
+            },
+            {
+              "name": "recommended_resolution"
+            },
+            {
+              "name": "validation_status"
+            },
+            {
+              "name": "validation_recommendation"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "044a099b-5a67-452a-ae38-8d652df79be7",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Incident ID: {{$json.incident_id}}\nTitle: {{$json.title}}\nService: {{$json.service}}\nSeverity: {{$json.severity}}\nPriority: {{$json.priority}}\nBusiness Impact: {{$json.business_impact}}\nAffected Users: {{$json.affected_users}}\nSLA: {{$json.sla_response}}\nRoot Cause: {{$json.primary_root_cause}}\nAffected Component: {{$json.affected_component}}\nRecommended Resolution: {{$json.recommended_resolution}}\nValidation Status: {{$json.validation_status}}\nValidation Recommendation: {{$json.validation_recommendation}}\nGenerate the notification.",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "# Enterprise Notification Generator Agent\nGenerate a concise professional IT Operations incident notification, maximum 120 words.\nInclude incident ID, service, severity, root cause and recommended resolution.\nChoose one allowed target team and channel. Return ONLY valid JSON."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        360,
+        0
+      ],
+      "id": "3afe9199-d0cb-46d6-ae28-9222cdce93ba",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-flash-lite-latest",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        320,
+        260
+      ],
+      "id": "b0db76f0-5540-4ca2-8260-5d1664316d37",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "GCfTu4oblRJMzlFH",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"notification_title\": {\n      \"type\": \"string\"\n    },\n    \"notification_message\": {\n      \"type\": \"string\"\n    },\n    \"target_team\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"Infrastructure Team\",\n        \"Application Team\",\n        \"Database Team\",\n        \"Network Team\",\n        \"Cloud Operations\",\n        \"Security Operations\",\n        \"DevOps Team\",\n        \"Incident Management\"\n      ]\n    },\n    \"communication_channel\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"Slack\",\n        \"Microsoft Teams\",\n        \"Email\",\n        \"SMS\",\n        \"PagerDuty\"\n      ]\n    },\n    \"priority\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"P1\",\n        \"P2\",\n        \"P3\",\n        \"P4\"\n      ]\n    }\n  },\n  \"required\": [\n    \"notification_title\",\n    \"notification_message\",\n    \"target_team\",\n    \"communication_channel\",\n    \"priority\"\n  ]\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        560,
+        260
+      ],
+      "id": "f547106c-e862-4658-a647-66162e3241a6",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "jsCode": "const j = $input.first().json;\nlet o = j.output ?? j;\nif (typeof o === 'string') {\n  try { o = JSON.parse(o); } catch (e) { throw new Error('Invalid agent JSON: ' + o); }\n}\nreturn [{ json: o }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        0
+      ],
+      "id": "2b16bc46-1afa-4455-9255-85ea5dfbbb06",
+      "name": "Normalize Output"
+    },
+    {
+      "parameters": {
+        "jsCode": "const o=$input.first().json; const b=$('When Executed by Another Workflow').item.json; return [{json:{...b,...o}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        940,
+        0
+      ],
+      "id": "final-contract-639408620903",
+      "name": "Return Notification Contract"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Normalize Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Output": {
+      "main": [
+        [
+          {
+            "node": "Return Notification Contract",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": []
+}

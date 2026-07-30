@@ -1,0 +1,193 @@
+{
+  "name": "Agent 9 - Hallucination Detection - FINAL",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "incident_id"
+            },
+            {
+              "name": "title"
+            },
+            {
+              "name": "description"
+            },
+            {
+              "name": "summary"
+            },
+            {
+              "name": "possible_causes",
+              "type": "object"
+            },
+            {
+              "name": "recommended_runbook"
+            },
+            {
+              "name": "primary_root_cause"
+            },
+            {
+              "name": "technical_explanation"
+            },
+            {
+              "name": "recommended_resolution"
+            },
+            {
+              "name": "resolution_category"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "fce34ed6-1892-4ed0-b496-ba423416aa08",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Incident ID: {{$json.incident_id}}\nTitle: {{$json.title}}\nDescription: {{$json.description}}\nKnowledge Summary: {{$json.summary}}\nPossible Causes: {{JSON.stringify($json.possible_causes || [])}}\nRecommended Runbook: {{$json.recommended_runbook}}\nPrimary Root Cause: {{$json.primary_root_cause}}\nTechnical Explanation: {{$json.technical_explanation}}\nRecommended Resolution: {{$json.recommended_resolution}}\nResolution Category: {{$json.resolution_category}}\nValidate against enterprise knowledge.",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "# Enterprise Hallucination Detection Agent\nVerify whether root-cause analysis and resolution are supported by retrieved enterprise knowledge.\nUnsupported root causes, resolutions or technical claims count as hallucination. If evidence is insufficient:\nhallucination_detected=true and recommendation=Human Review. Return ONLY valid JSON."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        360,
+        0
+      ],
+      "id": "f221635a-3369-4abb-8a8f-f6dba43b02d3",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-flash-lite-latest",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        320,
+        260
+      ],
+      "id": "0f2ed7d3-9d37-4ccd-b054-183c5b3dd0d1",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "GCfTu4oblRJMzlFH",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"hallucination_detected\": {\n      \"type\": \"boolean\"\n    },\n    \"evidence_supported\": {\n      \"type\": \"boolean\"\n    },\n    \"validation_status\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"Verified\",\n        \"Partially Verified\",\n        \"Not Verified\"\n      ]\n    },\n    \"recommendation\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"Continue\",\n        \"Human Review\",\n        \"Retry Retrieval\"\n      ]\n    },\n    \"confidence\": {\n      \"type\": \"number\",\n      \"minimum\": 0,\n      \"maximum\": 1\n    }\n  },\n  \"required\": [\n    \"hallucination_detected\",\n    \"evidence_supported\",\n    \"validation_status\",\n    \"recommendation\",\n    \"confidence\"\n  ]\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        560,
+        260
+      ],
+      "id": "5621433b-a3f9-4762-91dd-3e841cd82e64",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "jsCode": "const j = $input.first().json;\nlet o = j.output ?? j;\nif (typeof o === 'string') {\n  try { o = JSON.parse(o); } catch (e) { throw new Error('Invalid agent JSON: ' + o); }\n}\nreturn [{ json: o }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        0
+      ],
+      "id": "23404221-f01d-4865-ac99-ccb72845914f",
+      "name": "Normalize Output"
+    },
+    {
+      "parameters": {
+        "jsCode": "const o=$input.first().json; const b=$('When Executed by Another Workflow').item.json; return [{json:{...b,...o}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        940,
+        0
+      ],
+      "id": "final-contract-436615059372",
+      "name": "Return Hallucination Contract"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Normalize Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Output": {
+      "main": [
+        [
+          {
+            "node": "Return Hallucination Contract",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": []
+}

@@ -1,0 +1,179 @@
+{
+  "name": "Agent 2 - Severity Assessment - FINAL",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "incident",
+              "type": "object"
+            },
+            {
+              "name": "incident_type"
+            },
+            {
+              "name": "category"
+            },
+            {
+              "name": "priority"
+            },
+            {
+              "name": "classification_confidence",
+              "type": "number"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "ace41517-adee-44e6-96c9-ed6a35c12d69",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Incident ID: {{$json.incident.incident_id || 'Not provided'}}\nTitle: {{$json.incident.title || 'Not provided'}}\nDescription: {{$json.incident.description || 'Not provided'}}\nService: {{$json.incident.service || $json.incident.serviceType || 'Not provided'}}\nIncident Type: {{$json.incident_type}}\nCategory: {{$json.category}}\nPriority: {{$json.priority}}\nClassification Confidence: {{$json.classification_confidence}}\nAssess severity and business impact.",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "# Enterprise Severity Assessment Agent\nAssess severity using business impact, service availability, affected users and operational risk.\nCritical: production/revenue service unavailable, payments/database/security breach or large impact.\nHigh: major degradation/core unavailable/no workaround. Medium: partial degradation/workaround/limited impact.\nLow: cosmetic/minor/internal/small impact. Return ONLY JSON matching the schema."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        360,
+        0
+      ],
+      "id": "9856d5c3-5ab8-4172-bada-ee82bc699e57",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-flash-lite-latest",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        320,
+        260
+      ],
+      "id": "4e3fe308-09e3-4b4a-aeeb-e0d19e560c1d",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "GCfTu4oblRJMzlFH",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"severity\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"Critical\",\n        \"High\",\n        \"Medium\",\n        \"Low\"\n      ]\n    },\n    \"business_impact\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"Critical Business Impact\",\n        \"High Business Impact\",\n        \"Moderate Business Impact\",\n        \"Low Business Impact\"\n      ]\n    },\n    \"affected_users\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"Enterprise Wide\",\n        \"Thousands\",\n        \"Hundreds\",\n        \"Tens\",\n        \"Few\",\n        \"Unknown\"\n      ]\n    },\n    \"sla_response\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"Immediate\",\n        \"15 Minutes\",\n        \"30 Minutes\",\n        \"1 Hour\",\n        \"4 Hours\",\n        \"Next Business Day\"\n      ]\n    },\n    \"confidence\": {\n      \"type\": \"number\",\n      \"minimum\": 0,\n      \"maximum\": 1\n    }\n  },\n  \"required\": [\n    \"severity\",\n    \"business_impact\",\n    \"affected_users\",\n    \"sla_response\",\n    \"confidence\"\n  ]\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        560,
+        260
+      ],
+      "id": "e3523baa-d664-438b-9fca-04da6b3fb9f7",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "jsCode": "const j = $input.first().json;\nlet o = j.output ?? j;\nif (typeof o === 'string') {\n  try { o = JSON.parse(o); } catch (e) { throw new Error('Invalid agent JSON: ' + o); }\n}\nreturn [{ json: o }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        0
+      ],
+      "id": "12ca19cb-b1a9-40f5-bf49-a7b48eaba579",
+      "name": "Normalize Output"
+    },
+    {
+      "parameters": {
+        "jsCode": "const o=$input.first().json;\nconst base=$('When Executed by Another Workflow').item.json;\nconst incident=base.incident || {};\nreturn [{json:{incident,incident_id:incident.incident_id||'',title:incident.title||'',description:incident.description||'',service:incident.service||incident.serviceType||'',incident_type:base.incident_type||'',category:base.category||'',priority:base.priority||'',classification_confidence:base.classification_confidence??null,...o}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        940,
+        0
+      ],
+      "id": "final-contract-783763328874",
+      "name": "Return Severity Contract"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Normalize Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Output": {
+      "main": [
+        [
+          {
+            "node": "Return Severity Contract",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": []
+}

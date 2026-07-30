@@ -1,0 +1,190 @@
+{
+  "name": "Agent 7 - RAG Evaluation - FINAL",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "incident_id"
+            },
+            {
+              "name": "title"
+            },
+            {
+              "name": "description"
+            },
+            {
+              "name": "service"
+            },
+            {
+              "name": "severity"
+            },
+            {
+              "name": "priority"
+            },
+            {
+              "name": "summary"
+            },
+            {
+              "name": "possible_causes",
+              "type": "object"
+            },
+            {
+              "name": "recommended_runbook"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "b9632773-d2a6-42ba-8244-d044079a751c",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Incident ID: {{$json.incident_id}}\nTitle: {{$json.title}}\nDescription: {{$json.description}}\nService: {{$json.service}}\nSeverity: {{$json.severity}}\nPriority: {{$json.priority}}\nRetrieved Knowledge Summary: {{$json.summary}}\nPossible Causes: {{JSON.stringify($json.possible_causes || [])}}\nRecommended Runbook: {{$json.recommended_runbook}}\nEvaluate retrieval quality.",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "# Enterprise RAG Evaluation Agent\nEvaluate ONLY retrieved enterprise knowledge for relevance, completeness, accuracy and actionability.\nExcellent/Good => Proceed; Fair => Improve Retrieval; Poor => Retry Retrieval. Do not invent information.\nReturn ONLY valid JSON."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        360,
+        0
+      ],
+      "id": "25fe4e8b-2c28-4c3e-958a-115877573501",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-flash-lite-latest",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        320,
+        260
+      ],
+      "id": "4bd9e9e4-6563-4ec0-a180-80365f120823",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "GCfTu4oblRJMzlFH",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"retrieval_quality\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"Excellent\",\n        \"Good\",\n        \"Fair\",\n        \"Poor\"\n      ]\n    },\n    \"knowledge_relevant\": {\n      \"type\": \"boolean\"\n    },\n    \"knowledge_complete\": {\n      \"type\": \"boolean\"\n    },\n    \"recommendation\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"Proceed\",\n        \"Improve Retrieval\",\n        \"Retry Retrieval\"\n      ]\n    },\n    \"confidence\": {\n      \"type\": \"number\",\n      \"minimum\": 0,\n      \"maximum\": 1\n    }\n  },\n  \"required\": [\n    \"retrieval_quality\",\n    \"knowledge_relevant\",\n    \"knowledge_complete\",\n    \"recommendation\",\n    \"confidence\"\n  ]\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        560,
+        260
+      ],
+      "id": "fee4f2d5-59d7-49e6-a170-3f4c24a54b39",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "jsCode": "const j = $input.first().json;\nlet o = j.output ?? j;\nif (typeof o === 'string') {\n  try { o = JSON.parse(o); } catch (e) { throw new Error('Invalid agent JSON: ' + o); }\n}\nreturn [{ json: o }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        0
+      ],
+      "id": "7ffc85d2-2ca4-40f8-a9ef-c6bbd2e1f60c",
+      "name": "Normalize Output"
+    },
+    {
+      "parameters": {
+        "jsCode": "const o=$input.first().json; const b=$('When Executed by Another Workflow').item.json; return [{json:{...b,...o}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        940,
+        0
+      ],
+      "id": "final-contract-882357608130",
+      "name": "Return RAG Evaluation Contract"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Normalize Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Output": {
+      "main": [
+        [
+          {
+            "node": "Return RAG Evaluation Contract",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": []
+}

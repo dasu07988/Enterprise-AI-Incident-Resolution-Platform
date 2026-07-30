@@ -1,0 +1,300 @@
+{
+  "name": "Agent 3 - Knowledge Retrieval - FINAL",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "incident_id"
+            },
+            {
+              "name": "title"
+            },
+            {
+              "name": "description"
+            },
+            {
+              "name": "service"
+            },
+            {
+              "name": "incident_type"
+            },
+            {
+              "name": "category"
+            },
+            {
+              "name": "severity"
+            },
+            {
+              "name": "priority"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "8ebff15a-5dde-46c4-abbc-c3adcaec18da",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "jsCode": "const j=$input.first().json;\nreturn [{json:{...j, query:[j.title,j.description,j.service,j.incident_type,j.category,j.severity].filter(Boolean).join(' | ')}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        0
+      ],
+      "id": "392142ed-9e2e-4dae-9295-a6fbf1b8e366",
+      "name": "Build Retrieval Query"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-embedding-001",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        400,
+        260
+      ],
+      "id": "2bae5e6c-f7c5-4005-83d1-74b398d1d8ca",
+      "name": "Embeddings Google Gemini",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "GCfTu4oblRJMzlFH",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "load",
+        "pineconeIndex": {
+          "__rl": true,
+          "value": "apexpay-incident-kb",
+          "mode": "list",
+          "cachedResultName": "apexpay-incident-kb"
+        },
+        "prompt": "={{$json.query}}",
+        "topK": 5,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePinecone",
+      "typeVersion": 1.3,
+      "position": [
+        440,
+        0
+      ],
+      "id": "05c5e413-46fc-45d9-8bb2-dea08c8d7325",
+      "name": "Pinecone Vector Store"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "documents",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        680,
+        0
+      ],
+      "id": "3e018755-e585-40aa-aeb8-b3b2fdf664af",
+      "name": "Aggregate Knowledge"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Incident ID: {{$('Build Retrieval Query').item.json.incident_id}}\nTitle: {{$('Build Retrieval Query').item.json.title}}\nDescription: {{$('Build Retrieval Query').item.json.description}}\nRetrieved documents: {{JSON.stringify($json.documents)}}\nSummarize ONLY the retrieved enterprise knowledge and identify supported possible causes and runbook guidance.",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "# Enterprise Knowledge Retrieval Agent\nUse ONLY retrieved Pinecone enterprise knowledge. Do not invent facts. If retrieval is weak, say so in summary and use low confidence.\nknowledge should contain a concise evidence-grounded representation of retrieved material. Return ONLY valid JSON."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        880,
+        0
+      ],
+      "id": "893385c6-899b-4891-9e9b-f461c37878c6",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-flash-lite-latest",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        840,
+        260
+      ],
+      "id": "90699c9f-09e4-4a6d-83d0-16213a75f9e2",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "GCfTu4oblRJMzlFH",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"summary\": {\n      \"type\": \"string\"\n    },\n    \"possible_causes\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"string\"\n      }\n    },\n    \"recommended_runbook\": {\n      \"type\": \"string\"\n    },\n    \"knowledge\": {\n      \"type\": \"string\"\n    },\n    \"confidence\": {\n      \"type\": \"number\",\n      \"minimum\": 0,\n      \"maximum\": 1\n    }\n  },\n  \"required\": [\n    \"summary\",\n    \"possible_causes\",\n    \"recommended_runbook\",\n    \"knowledge\",\n    \"confidence\"\n  ]\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1080,
+        260
+      ],
+      "id": "18a09093-9443-4f41-b336-756c77933d72",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "jsCode": "const j = $input.first().json;\nlet o = j.output ?? j;\nif (typeof o === 'string') {\n  try { o = JSON.parse(o); } catch (e) { throw new Error('Invalid agent JSON: ' + o); }\n}\nreturn [{ json: o }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        0
+      ],
+      "id": "9222c566-6309-48ff-bbf2-0eb68d6934b8",
+      "name": "Normalize Output"
+    },
+    {
+      "parameters": {
+        "jsCode": "const o=$input.first().json; const base=$('Build Retrieval Query').item.json;\nreturn [{json:{incident_id:base.incident_id,title:base.title,description:base.description,service:base.service,\nincident_type:base.incident_type,category:base.category,severity:base.severity,priority:base.priority,...o}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        0
+      ],
+      "id": "245332c1-d7ea-49c2-9d41-9c896b4beb16",
+      "name": "Return Knowledge Contract"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Build Retrieval Query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Retrieval Query": {
+      "main": [
+        [
+          {
+            "node": "Pinecone Vector Store",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Google Gemini": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Pinecone Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pinecone Vector Store": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Knowledge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate Knowledge": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Normalize Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Output": {
+      "main": [
+        [
+          {
+            "node": "Return Knowledge Contract",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": []
+}

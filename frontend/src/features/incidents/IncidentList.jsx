@@ -14,7 +14,7 @@ import { useDebounce } from "../../hooks/useDebounce";
 import { SEVERITY_ORDER, STATUS_ORDER } from "../../utils/severityConfig";
 import { formatDate } from "../../utils/formatDate";
 import { useEffect, useState } from "react";
-import { analyzeIncident } from "../../api/incidents.api";
+
 
 const COLUMNS = [
   { key: "id", label: "ID" },
@@ -39,35 +39,13 @@ export default function IncidentList() {
 
   const { items, total, totalPages, page, pageSize, loading } = useIncidents(filters);
 
-  // Temporary AI Test
-  const handleTest = async () => {
-    try {
-      const result = await analyzeIncident({
-        title: "Database Connection Failure",
-        description: "Users cannot connect to the production database.",
-        priority: "High",
-      });
-
-      console.log("AI Response:", result);
-
-      alert("✅ AI Workflow executed successfully!");
-    } catch (err) {
-      console.error(err);
-      alert("❌ Error: " + (err.response?.data?.message || err.message));
-    }
-  };
 
   return (
     <div className="flex flex-col gap-4">
 
       <div className="flex flex-wrap gap-3 items-center">
 
-        <button
-          onClick={handleTest}
-          className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
-        >
-          Test AI
-        </button>
+        
 
         <SearchBar
           value={searchInput}

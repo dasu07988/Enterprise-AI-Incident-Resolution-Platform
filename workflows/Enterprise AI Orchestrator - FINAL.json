@@ -77,7 +77,7 @@
             "incident_type": "={{ $('Agent 1 - Classification').item.json.incident_type }}",
             "category": "={{ $('Agent 1 - Classification').item.json.category }}",
             "priority": "={{ $('Agent 1 - Classification').item.json.priority }}",
-            "confidence": 0
+            "classification_confidence": "={{ $('Agent 1 - Classification').item.json.confidence }}"
           },
           "matchingColumns": [],
           "schema": [
@@ -122,8 +122,8 @@
               "removed": false
             },
             {
-              "id": "confidence",
-              "displayName": "confidence",
+              "id": "classification_confidence",
+              "displayName": "classification_confidence",
               "required": false,
               "defaultMatch": false,
               "display": true,
@@ -165,7 +165,7 @@
             "category": "={{ $('Agent 1 - Classification').item.json.category }}",
             "severity": "={{ $('Agent 2 - Severity').item.json.severity }}",
             "priority": "={{ $('Agent 1 - Classification').item.json.priority }}",
-            "service": "={{ $('Webhook').item.json.body.serviceType }}"
+            "service": "={{ $('Agent 2 - Severity').item.json.service }}"
           },
           "matchingColumns": [],
           "schema": [
@@ -500,7 +500,18 @@
         },
         "workflowInputs": {
           "mappingMode": "defineBelow",
-          "value": {},
+          "value": {
+            "incident_id": "={{ $('Agent 3 - Knowledge Retrieval').item.json.incident_id }}",
+            "title": "={{ $('Agent 3 - Knowledge Retrieval').item.json.title }}",
+            "service": "={{ $('Agent 3 - Knowledge Retrieval').item.json.service }}\n",
+            "description": "={{ $('Agent 3 - Knowledge Retrieval').item.json.description }}\n",
+            "incident_type": "={{ $('Agent 3 - Knowledge Retrieval').item.json.incident_type }}",
+            "severity": "={{ $('Agent 2 - Severity').item.json.severity }}",
+            "category": "={{ $('Agent 3 - Knowledge Retrieval').item.json.category }}",
+            "summary": "={{ $('Agent 3 - Knowledge Retrieval').item.json.summary }}",
+            "recommended_runbook": "={{ $('Agent 3 - Knowledge Retrieval').item.json.recommended_runbook ?? '' }}",
+            "possible_causes": "={{ $('Agent 3 - Knowledge Retrieval').item.json.possible_causes ?? [] }}"
+          },
           "matchingColumns": [],
           "schema": [
             {
@@ -510,7 +521,8 @@
               "defaultMatch": false,
               "display": true,
               "canBeUsedToMatch": true,
-              "type": "string"
+              "type": "string",
+              "removed": false
             },
             {
               "id": "title",
@@ -519,7 +531,8 @@
               "defaultMatch": false,
               "display": true,
               "canBeUsedToMatch": true,
-              "type": "string"
+              "type": "string",
+              "removed": false
             },
             {
               "id": "description",
@@ -528,7 +541,8 @@
               "defaultMatch": false,
               "display": true,
               "canBeUsedToMatch": true,
-              "type": "string"
+              "type": "string",
+              "removed": false
             },
             {
               "id": "service",
@@ -537,7 +551,8 @@
               "defaultMatch": false,
               "display": true,
               "canBeUsedToMatch": true,
-              "type": "string"
+              "type": "string",
+              "removed": false
             },
             {
               "id": "incident_type",
@@ -546,7 +561,8 @@
               "defaultMatch": false,
               "display": true,
               "canBeUsedToMatch": true,
-              "type": "string"
+              "type": "string",
+              "removed": false
             },
             {
               "id": "category",
@@ -555,7 +571,8 @@
               "defaultMatch": false,
               "display": true,
               "canBeUsedToMatch": true,
-              "type": "string"
+              "type": "string",
+              "removed": false
             },
             {
               "id": "severity",
@@ -564,7 +581,8 @@
               "defaultMatch": false,
               "display": true,
               "canBeUsedToMatch": true,
-              "type": "string"
+              "type": "string",
+              "removed": false
             },
             {
               "id": "summary",
@@ -573,7 +591,8 @@
               "defaultMatch": false,
               "display": true,
               "canBeUsedToMatch": true,
-              "type": "string"
+              "type": "string",
+              "removed": false
             },
             {
               "id": "possible_causes",
@@ -582,7 +601,8 @@
               "defaultMatch": false,
               "display": true,
               "canBeUsedToMatch": true,
-              "type": "object"
+              "type": "array",
+              "removed": false
             },
             {
               "id": "recommended_runbook",
@@ -591,7 +611,8 @@
               "defaultMatch": false,
               "display": true,
               "canBeUsedToMatch": true,
-              "type": "string"
+              "type": "string",
+              "removed": false
             }
           ],
           "attemptToConvertTypes": false,
@@ -1244,7 +1265,7 @@
     "binaryMode": "separate",
     "availableInMCP": false
   },
-  "versionId": "cdeda8bd-bef9-42df-9a5b-286b74f50964",
+  "versionId": "7d30194e-09fb-41fd-a965-8e12a54c84e5",
   "meta": {
     "instanceId": "2025457592ebf0be06ef5c7772d2fc69e8a1bd38d32b75837dd39d48c5da7807"
   },

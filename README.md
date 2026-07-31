@@ -96,6 +96,15 @@ The system includes:
                        ▼
             Structured JSON Response
 ```
+### Architecture Diagram
+🏗 System Architecture
+   ↓
+Text architecture
+   ↓
+Architecture Diagram
+   ↓
+⚙ Technology Stack
+
 
 ---
 
@@ -292,7 +301,7 @@ POST /webhook/enterprise-ai-orchestrator
 
 ## Workflow
 
-<img src="screenshots/full_workflow.png" width="900"/>
+<img src="screenshots/Full Workflow (2).png" width="900"/>
 
 ---
 
